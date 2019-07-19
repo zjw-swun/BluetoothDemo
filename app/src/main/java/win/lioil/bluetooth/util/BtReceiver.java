@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
+import android.widget.Toast;
 
 /**
  * 监听蓝牙广播-各种状态
@@ -49,13 +50,25 @@ public class BtReceiver extends BroadcastReceiver {
             case BluetoothAdapter.ACTION_STATE_CHANGED:
                 int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, 0);
                 Log.i(TAG, "STATE: " + state);
+                switch (state) {
+                    case BluetoothAdapter.STATE_OFF:
+                        //蓝牙关闭
+                        break;
+                    case BluetoothAdapter.STATE_ON:
+                        //蓝牙开启
+                        break;
+                    default:
+                        break;
+                }
                 break;
             case BluetoothAdapter.ACTION_DISCOVERY_STARTED:
                 break;
             case BluetoothAdapter.ACTION_DISCOVERY_FINISHED:
+                Toast.makeText(context, "蓝牙扫描完毕", Toast.LENGTH_SHORT).show();
                 break;
 
             case BluetoothDevice.ACTION_FOUND:
+                //蓝牙扫描发现设备(多次调用 一次发现一个 发现所有附近蓝牙设备大概持续12S左右)
                 short rssi = intent.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MAX_VALUE);
                 Log.i(TAG, "EXTRA_RSSI:" + rssi);
                 mListener.foundDev(dev);
@@ -69,11 +82,31 @@ public class BtReceiver extends BroadcastReceiver {
                 }*/
                 break;
             case BluetoothDevice.ACTION_BOND_STATE_CHANGED:
-                Log.i(TAG, "BOND_STATE: " + intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, 0));
+                Log.i(TAG, "BOND_STATE: " + intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, -1));
+                int bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, -1);
+                switch (bondState) {
+                    case BluetoothDevice.BOND_NONE:
+                        Log.d(TAG, "BOND_NONE 删除配对");
+                        mListener.unBondDev(dev);
+                        break;
+                    case BluetoothDevice.BOND_BONDING:
+                        Log.d(TAG, "BOND_BONDING 正在配对");
+                        mListener.bondingDev(dev);
+                        break;
+                    case BluetoothDevice.BOND_BONDED:
+                        Log.d(TAG, "BOND_BONDED 配对成功");
+                        //建立连接
+                        mListener.bondDev(dev);
+                        break;
+                }
                 break;
             case BluetoothDevice.ACTION_ACL_CONNECTED:
+                //已连接
+                //mListener.connected(dev);
                 break;
             case BluetoothDevice.ACTION_ACL_DISCONNECTED:
+                //断开连接
+                //mListener.disConnected(dev);
                 break;
 
             case BluetoothAdapter.ACTION_CONNECTION_STATE_CHANGED:
@@ -90,5 +123,34 @@ public class BtReceiver extends BroadcastReceiver {
 
     public interface Listener {
         void foundDev(BluetoothDevice dev);
+
+        void bondDev(BluetoothDevice dev);
+
+        void unBondDev(BluetoothDevice dev);
+
+        void bondingDev(BluetoothDevice dev);
+    }
+
+    public class BtStatusChangeAdapter implements Listener {
+
+        @Override
+        public void foundDev(BluetoothDevice dev) {
+
+        }
+
+        @Override
+        public void bondDev(BluetoothDevice dev) {
+
+        }
+
+        @Override
+        public void unBondDev(BluetoothDevice dev) {
+
+        }
+
+        @Override
+        public void bondingDev(BluetoothDevice dev) {
+
+        }
     }
 }

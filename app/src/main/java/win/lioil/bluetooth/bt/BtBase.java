@@ -39,8 +39,9 @@ public class BtBase {
     void loopRead(BluetoothSocket socket) {
         mSocket = socket;
         try {
-            if (!mSocket.isConnected())
+            if (!mSocket.isConnected()) {
                 mSocket.connect();
+            }
             notifyUI(Listener.CONNECTED, mSocket.getRemoteDevice());
             mOut = new DataOutputStream(mSocket.getOutputStream());
             DataInputStream in = new DataInputStream(mSocket.getInputStream());

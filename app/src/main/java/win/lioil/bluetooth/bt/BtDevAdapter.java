@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -46,7 +47,7 @@ public class BtDevAdapter extends RecyclerView.Adapter<BtDevAdapter.VH> {
         String address = dev.getAddress();
         int bondState = dev.getBondState();
         holder.name.setText(name == null ? "" : name);
-        holder.address.setText(String.format("%s (%s)", address, bondState == 10 ? "未配对" : "配对"));
+        holder.address.setText(String.format("%s (%s)", address, bondState == BluetoothDevice.BOND_NONE ? "未配对" : "配对"));
     }
 
     @Override
@@ -55,10 +56,20 @@ public class BtDevAdapter extends RecyclerView.Adapter<BtDevAdapter.VH> {
     }
 
     public void add(BluetoothDevice dev) {
-        if (mDevices.contains(dev))
+        if (TextUtils.isEmpty(dev.getName())) {
             return;
+        }
+        if (mDevices.contains(dev)) {
+            return;
+        }
         mDevices.add(dev);
         notifyDataSetChanged();
+    }
+
+    public void notifyItem(BluetoothDevice dev) {
+        if (mDevices.contains(dev)) {
+            notifyItemChanged(mDevices.indexOf(dev));
+        }
     }
 
     public void reScan() {
@@ -70,13 +81,14 @@ public class BtDevAdapter extends RecyclerView.Adapter<BtDevAdapter.VH> {
         notifyDataSetChanged();
     }
 
-    class VH extends RecyclerView.ViewHolder implements View.OnClickListener {
+    class VH extends RecyclerView.ViewHolder implements View.OnClickListener, View.OnLongClickListener {
         final TextView name;
         final TextView address;
 
         VH(final View itemView) {
             super(itemView);
             itemView.setOnClickListener(this);
+            itemView.setOnLongClickListener(this);
             name = itemView.findViewById(R.id.name);
             address = itemView.findViewById(R.id.address);
         }
@@ -85,12 +97,25 @@ public class BtDevAdapter extends RecyclerView.Adapter<BtDevAdapter.VH> {
         public void onClick(View v) {
             int pos = getAdapterPosition();
             Log.d(TAG, "onClick, getAdapterPosition=" + pos);
-            if (pos >= 0 && pos < mDevices.size())
+            if (pos >= 0 && pos < mDevices.size()) {
                 mListener.onItemClick(mDevices.get(pos));
+            }
+        }
+
+        @Override
+        public boolean onLongClick(View v) {
+            int pos = getAdapterPosition();
+            if (pos >= 0 && pos < mDevices.size()) {
+                mListener.onItemLongClick(mDevices.get(pos));
+                return true;
+            }
+            return false;
         }
     }
 
     public interface Listener {
         void onItemClick(BluetoothDevice dev);
+
+        void onItemLongClick(BluetoothDevice dev);
     }
 }
