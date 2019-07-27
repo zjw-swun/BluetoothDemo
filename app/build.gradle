@@ -10,6 +10,20 @@ android {
         versionName "1.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
+    sourceSets {
+        main {
+            jni.srcDirs = []
+            jniLibs.srcDirs = ['src/main/libs'] // 配置此处才会打包jni 的.so 文件
+        }
+    }
+
+    //此配置Studio会自动编译生成.so文件，并自动打包到apk中
+    //externalNativeBuild {
+    //    ndkBuild {
+    //        path file('src/main/jni/Android.mk')
+    //    }
+    //}
+
     buildTypes {
         release {
             minifyEnabled false
@@ -24,7 +38,8 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation 'com.android.support.constraint:constraint-layout:1.1.0'
+    implementation 'com.android.support.constraint:constraint-layout:1.1.3'
     implementation 'com.android.support:appcompat-v7:27.1.1'
     implementation 'com.android.support:recyclerview-v7:27.1.1'
+    api 'com.yanzhenjie:permission:2.0.0-rc12'
 }

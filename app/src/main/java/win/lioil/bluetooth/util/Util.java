@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 public class Util {
     private static final String TAG = Util.class.getSimpleName();
     public static final Executor EXECUTOR = Executors.newCachedThreadPool();
+    public static final Executor SINGLEEXECUTOR = Executors.newSingleThreadExecutor();
 
     public static void mkdirs(String filePath) {
         boolean mk = new File(filePath).mkdirs();

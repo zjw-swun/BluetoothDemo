@@ -13,6 +13,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.dave.wifirealtimespeeker.audio.SpeexTalkPlayer;
+import com.dave.wifirealtimespeeker.audio.SpeexTalkRecorder;
+
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -35,6 +38,8 @@ public class BtClientActivity extends Activity implements BtBase.Listener, BtRec
     private static final int DISCOVERABLE_TIMEOUT_FIVE_MINUTES = 300;
     private static final int DISCOVERABLE_TIMEOUT_ONE_HOUR = 3600;
     static final int DISCOVERABLE_TIMEOUT_NEVER = 0;
+    private SpeexTalkRecorder mSpeexTalkRecorder;
+    private SpeexTalkPlayer mSpeexTalkPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,12 +55,24 @@ public class BtClientActivity extends Activity implements BtBase.Listener, BtRec
         mBtReceiver = new BtReceiver(this, this);//注册蓝牙广播
         //setDiscoverableTimeout(DISCOVERABLE_TIMEOUT_TWO_MINUTES);
         BluetoothAdapter.getDefaultAdapter().startDiscovery();
+
+        mSpeexTalkRecorder = new SpeexTalkRecorder(new SpeexTalkRecorder.onRecorderListener() {
+            @Override
+            public void handleRecordData(byte[] recordData) {
+                mClient.sendAudio(recordData);
+              //  mSpeexTalkPlayer.play(recordData);
+            }
+        });
+
+        mSpeexTalkPlayer = new SpeexTalkPlayer();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(mBtReceiver);
+        mSpeexTalkPlayer.release();
+        mSpeexTalkRecorder.release();
         mClient.unListener();
         mClient.close();
     }
@@ -142,6 +159,18 @@ public class BtClientActivity extends Activity implements BtBase.Listener, BtRec
             APP.toast("没有连接", 0);
     }
 
+    public void sendAudio(View view) {
+        if (mClient.isConnected(null)) {
+            mSpeexTalkRecorder.start();
+        } else {
+            APP.toast("没有连接", 0);
+        }
+    }
+
+    public void endAudio(View view) {
+        mSpeexTalkRecorder.stop();
+    }
+
     @Override
     public void socketNotify(int state, final Object obj) {
         if (isDestroyed())
@@ -157,12 +186,19 @@ public class BtClientActivity extends Activity implements BtBase.Listener, BtRec
                 msg = "连接断开";
                 mTips.setText(msg);
                 break;
+            case BtBase.Listener.AUDIO:
+                mSpeexTalkPlayer.play((byte[]) obj);
+                break;
             case BtBase.Listener.MSG:
                 msg = String.format("\n%s", obj);
                 mLogs.append(msg);
                 break;
+            default:
+                break;
         }
-        APP.toast(msg, 0);
+        if (!TextUtils.isEmpty(msg)) {
+            APP.toast(msg, 0);
+        }
     }
 
     //得到配对的设备列表，清除已配对的设备
@@ -217,4 +253,5 @@ public class BtClientActivity extends Activity implements BtBase.Listener, BtRec
             e.printStackTrace();
         }
     }
+
 }

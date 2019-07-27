@@ -4,6 +4,8 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.os.Environment;
 
+import com.dave.wifirealtimespeeker.audio.AudioConfig;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -22,12 +24,13 @@ public class BtBase {
     private static final String FILE_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/bluetooth/";
     private static final int FLAG_MSG = 0;  //消息标记
     private static final int FLAG_FILE = 1; //文件标记
+    private static final int FLAG_AUDIO = 3; //语音标记
 
     private BluetoothSocket mSocket;
     private DataOutputStream mOut;
     private Listener mListener;
     private boolean isRead;
-    private boolean isSending;
+    private volatile boolean isSending;
 
     BtBase(Listener listener) {
         mListener = listener;
@@ -69,6 +72,13 @@ public class BtBase {
                                 break;
                         }
                         notifyUI(Listener.MSG, "文件接收完成(存放在:" + FILE_PATH + ")");
+                        break;
+                    case FLAG_AUDIO: //读取音频
+                        byte[] encodedbytes = new byte[AudioConfig.SPEEX_DATA_SIZE];
+                        int read = in.read(encodedbytes);
+                        notifyUI(Listener.AUDIO, encodedbytes);
+                        break;
+                    default:
                         break;
                 }
             }
@@ -124,6 +134,26 @@ public class BtBase {
         });
     }
 
+
+    public void sendAudio(final byte[] recordData) {
+        //if (checkSend()) return;
+        isSending = true;
+        Util.SINGLEEXECUTOR.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    mOut.writeInt(FLAG_AUDIO); //音频标记
+                    mOut.write(recordData);
+                    //notifyUI(Listener.MSG, "正在发送语音...");
+                    mOut.flush();
+                } catch (Throwable e) {
+                    closeNonotifyUI();
+                }
+                isSending = false;
+            }
+        });
+    }
+
     /**
      * 释放监听引用(例如释放对Activity引用，避免内存泄漏)
      */
@@ -139,6 +169,18 @@ public class BtBase {
             isRead = false;
             mSocket.close();
             notifyUI(Listener.DISCONNECTED, null);
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 关闭Socket连接
+     */
+    public void closeNonotifyUI() {
+        try {
+            isRead = false;
+            mSocket.close();
         } catch (Throwable e) {
             e.printStackTrace();
         }
@@ -177,10 +219,12 @@ public class BtBase {
         });
     }
 
+
     public interface Listener {
         int DISCONNECTED = 0;
         int CONNECTED = 1;
         int MSG = 2;
+        int AUDIO = 3;
 
         void socketNotify(int state, Object obj);
     }
